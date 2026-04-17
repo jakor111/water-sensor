@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Эмулятор датчиков минеральной воды</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      color: #e0e0e0;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 8px;
+      text-align: center;
+      color: #4fc3f7;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #90a4ae;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 24px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      color: #b0bec5;
+    }
+
+    .card-value {
+      font-size: 2.4rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .card-unit {
+      font-size: 1rem;
+      font-weight: 400;
+      color: #78909c;
+      margin-left: 4px;
+    }
+
+    .card-range {
+      font-size: 0.78rem;
+      color: #546e7a;
+      margin-top: 8px;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .status.ok    { background: rgba(76, 175, 80, 0.2); color: #66bb6a; }
+    .status.warn  { background: rgba(255, 183, 77, 0.2); color: #ffa726; }
+    .status.bad   { background: rgba(239, 83, 80, 0.2);  color: #ef5350; }
+
+    /* Цвета карточек */
+    .card.ph .icon       { background: rgba(171, 71, 188, 0.2); }
+    .card.ph .card-value { color: #ce93d8; }
+
+    .card.mineral .icon       { background: rgba(41, 182, 246, 0.2); }
+    .card.mineral .card-value { color: #4fc3f7; }
+
+    .card.temp .icon       { background: rgba(255, 112, 67, 0.2); }
+    .card.temp .card-value { color: #ff8a65; }
+
+    .card.conduct .icon       { background: rgba(255, 213, 79, 0.2); }
+    .card.conduct .card-value { color: #ffd54f; }
+
+    .card.turbid .icon       { background: rgba(129, 199, 132, 0.2); }
+    .card.turbid .card-value { color: #81c784; }
+
+    .card.pressure .icon       { background: rgba(149, 119, 255, 0.2); }
+    .card.pressure .card-value { color: #b388ff; }
+
+    .timestamp {
+      margin-top: 30px;
+      font-size: 0.8rem;
+      color: #546e7a;
+    }
+
+    .api-hint {
+      margin-top: 20px;
+      padding: 14px 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px dashed rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      font-size: 0.78rem;
+      color: #607d8b;
+      max-width: 1000px;
+      width: 100%;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .api-hint code {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      color: #90a4ae;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>💧 Эмулятор датчиков минеральной воды</h1>
+  <p class="subtitle">Обновление каждые 3 секунды · Данные генерируются случайно в заданных диапазонах</p>
+
+  <div class="grid" id="dashboard">
+
+    <div class="card ph">
+      <div class="card-header">
+        <div class="icon">🧪</div>
+        <span class="card-title">pH — Водородный показатель</span>
+      </div>
+      <div><span class="card-value" id="val-ph">—</span></div>
+      <div class="card-range">Диапазон: 6.0 – 8.5</div>
+      <span class="status ok" id="st-ph">OK</span>
+    </div>
+
+    <div class="card mineral">
+      <div class="card-header">
+        <div class="icon">💎</div>
+        <span class="card-title">Общая минерализация</span>
+      </div>
+      <div><span class="card-value" id="val-mineral">—</span><span class="card-unit">мг/л</span></div>
+      <div class="card-range">Диапазон: 50 – 500 мг/л</div>
+      <span class="status ok" id="st-mineral">OK</span>
+    </div>
+
+    <div class="card temp">
+      <div class="card-header">
+        <div class="icon">🌡️</div>
+        <span class="card-title">Температура воды</span>
+      </div>
+      <div><span class="card-value" id="val-temp">—</span><span class="card-unit">°C</span></div>
+      <div class="card-range">Диапазон: 4 – 25 °C</div>
+      <span class="status ok" id="st-temp">OK</span>
+    </div>
+
+    <div class="card conduct">
+      <div class="card-header">
+        <div class="icon">⚡</div>
+        <span class="card-title">Электропроводимость</span>
+      </div>
+      <div><span class="card-value" id="val-conduct">—</span><span class="card-unit">мкСм/см</span></div>
+      <div class="card-range">Диапазон: 100 – 1000 мкСм/см</div>
+      <span class="status ok" id="st-conduct">OK</span>
+    </div>
+
+    <div class="card turbid">
+      <div class="card-header">
+        <div class="icon">🔍</div>
+        <span class="card-title">Мутность</span>
+      </div>
+      <div><span class="card-value" id="val-turbid">—</span><span class="card-unit">NTU</span></div>
+      <div class="card-range">Диапазон: 0 – 4 NTU</div>
+      <span class="status ok" id="st-turbid">OK</span>
+    </div>
+
+    <div class="card pressure">
+      <div class="card-header">
+        <div class="icon">🔧</div>
+        <span class="card-title">Давление в системе</span>
+      </div>
+      <div><span class="card-value" id="val-pressure">—</span><span class="card-unit">бар</span></div>
+      <div class="card-range">Диапазон: 2 – 6 бар</div>
+      <span class="status ok" id="st-pressure">OK</span>
+    </div>
+
+  </div>
+
+  <div class="timestamp" id="timestamp"></div>
+
+  <div class="api-hint">
+    📡 <strong>API:</strong> Для получения данных в формате JSON откройте:<br>
+    <code>?api</code> или <code>?json</code> в конце URL<br>
+    Пример: <code>https://ваш-ник.github.io/репозиторий/?api</code>
+  </div>
+
+  <script>
+    // ============================================================
+    //  ГЕНЕРАТОР СЛУЧАЙНЫХ ЗНАЧЕНИЙ ДАТЧИКОВ
+    // ============================================================
+
+    function rand(min, max, decimals) {
+      const val = Math.random() * (max - min) + min;
+      return parseFloat(val.toFixed(decimals));
+    }
+
+    // Конфигурация датчиков: диапазон, единица, кол-во знаков
+    const SENSORS = {
+      ph:       { min: 6.0,  max: 8.5,  decimals: 2, unit: '' },
+      mineral:  { min: 50,   max: 500,  decimals: 1, unit: 'мг/л' },
+      temp:     { min: 4,    max: 25,   decimals: 1, unit: '°C' },
+      conduct:  { min: 100,  max: 1000, decimals: 1, unit: 'мкСм/см' },
+      turbid:   { min: 0,    max: 4,    decimals: 2, unit: 'NTU' },
+      pressure: { min: 2,    max: 6,    decimals: 2, unit: 'бар' },
+    };
+
+    // Статусы по пороговым значениям
+    function getStatus(name, value) {
+      const ranges = {
+        ph:       { ok: [6.5, 8.5],  warn: [6.0, 9.0] },
+        mineral:  { ok: [50, 500],   warn: [0, 1500] },
+        temp:     { ok: [4, 25],     warn: [0, 40] },
+        conduct:  { ok: [100, 1000], warn: [0, 2000] },
+        turbid:   { ok: [0, 1],      warn: [0, 4] },
+        pressure: { ok: [2, 6],      warn: [0, 10] },
+      };
+      const r = ranges[name];
+      if (value >= r.ok[0] && value <= r.ok[1]) return { text: 'OK',     cls: 'ok' };
+      if (value >= r.warn[0] && value <= r.warn[1]) return { text: 'Внимание', cls: 'warn' };
+      return { text: 'Критично', cls: 'bad' };
+    }
+
+    function generateData() {
+      const data = { timestamp: new Date().toISOString(), sensors: {} };
+      for (const [key, cfg] of Object.entries(SENSORS)) {
+        const value = rand(cfg.min, cfg.max, cfg.decimals);
+        const status = getStatus(key, value);
+        data.sensors[key] = { value, unit: cfg.unit, status: status.text };
+      }
+      return data;
+    }
+
+    // ============================================================
+    //  РЕЖИМ API — отдаём чистый JSON
+    // ============================================================
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('api') || params.has('json')) {
+      document.open();
+      document.write(JSON.stringify(generateData(), null, 2));
+      document.close();
+      // Для fetch-запросов из других окон
+      window.addEventListener('message', (e) => {
+        if (e.data === 'getSensorData') {
+          e.source.postMessage(generateData(), '*');
+        }
+      });
+      throw 'API mode';
+    }
+
+    // ============================================================
+    //  РЕЖИМ ДАШБОРДА — визуальное отображение
+    // ============================================================
+
+    function updateDashboard() {
+      const data = generateData();
+
+      for (const [key, sensor] of Object.entries(data.sensors)) {
+        const valEl = document.getElementById('val-' + key);
+        const stEl  = document.getElementById('st-' + key);
+        if (valEl) valEl.textContent = sensor.value;
+        if (stEl) {
+          stEl.textContent = sensor.status;
+          stEl.className = 'status ' + (sensor.status === 'OK' ? 'ok' : sensor.status === 'Внимание' ? 'warn' : 'bad');
+        }
+      }
+
+      document.getElementById('timestamp').textContent =
+        'Последнее обновление: ' + data.timestamp;
+    }
+
+    updateDashboard();
+    setInterval(updateDashboard, 3000);
+
+    // Поддержка postMessage для iframe
+    window.addEventListener('message', (e) => {
+      if (e.data === 'getSensorData') {
+        e.source.postMessage(generateData(), '*');
+      }
+    });
+  </script>
+</body>
+</html>
